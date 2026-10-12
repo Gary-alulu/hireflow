@@ -51,6 +51,8 @@ export default function JobsListPage() {
     all: jobs.length,
     active: jobs.filter(j => j.status === 'active').length,
     draft: jobs.filter(j => j.status === 'draft').length,
+    paused: jobs.filter(j => j.status === 'paused').length,
+    closed: jobs.filter(j => j.status === 'closed').length,
   };
 
   return (
@@ -76,6 +78,8 @@ export default function JobsListPage() {
             { key: 'all', label: 'All Jobs' },
             { key: 'active', label: 'Active' },
             { key: 'draft', label: 'Drafts' },
+            { key: 'paused', label: 'Paused' },
+            { key: 'closed', label: 'Closed' },
           ].map(({ key, label }) => (
             <button
               key={key}

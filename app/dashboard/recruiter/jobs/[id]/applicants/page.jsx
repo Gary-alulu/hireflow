@@ -3,27 +3,53 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { Users, FileText, ChevronLeft, Calendar, Check, Search, Download, AlertCircle } from 'lucide-react';
-import { getMatchScoreBadge, timeAgo } from '@/lib/utils';
+import { Users, FileText, ChevronLeft, Calendar, Check, Search, Download, AlertCircle, Link2, User, Columns3, StickyNote, Loader2, Tag as TagIcon } from 'lucide-react';
+import { getMatchScoreBadge, timeAgo, getCvDownloadUrl } from '@/lib/utils';
 import {
   APPLICATION_STATUSES,
   hasMatchScore,
   tallyApplicationsByStatus,
 } from '@/lib/pipeline';
 import PageTransition from '@/components/PageTransition';
+import MatchBreakdown from '@/components/MatchBreakdown';
+import MessageThread from '@/components/MessageThread';
+import TagEditor from '@/components/TagEditor';
+import Select from '@/components/ui/Select';
+
+const INTERVIEW_TYPE_OPTIONS = [
+  { value: 'Video', label: 'Video Call' },
+  { value: 'Phone', label: 'Phone Screen' },
+  { value: 'In-Person', label: 'In-Person' },
+  { value: 'Technical', label: 'Technical Assessment' },
+];
 
 export default function JobApplicantsPage() {
   const params = useParams();
+  // The current recruiter drives candid->recruiter reads; messages identify the
+  // sender by this id so the API can compute the counterparty.
+  const [sessionUserId, setSessionUserId] = useState(null);
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState(null);
   const [showScheduler, setShowScheduler] = useState(null);
-  const [scheduleForm, setScheduleForm] = useState({ interviewType: 'Video', scheduledDate: '', locationOrLink: '', notes: '' });
+  const [showReview, setShowReview] = useState(null);
+  const [scheduleForm, setScheduleForm] = useState({ interviewType: 'Video', scheduledDate: '', locationOrLink: '', notes: '', interviewerName: '' });
   const [scheduleLoading, setScheduleLoading] = useState(false);
   const [filterStage, setFilterStage] = useState('All');
   const [updateError, setUpdateError] = useState(null);
   const [savedId, setSavedId] = useState(null);
+  const [noteDrafts, setNoteDrafts] = useState({});
+  const [noteSavingId, setNoteSavingId] = useState(null);
+  const [noteEditingId, setNoteEditingId] = useState(null);
+  const [tagDrafts, setTagDrafts] = useState({});
   const savedTimer = useRef(null);
+
+  useEffect(() => {
+    fetch('/api/auth/session')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => data?.user?.userId && setSessionUserId(data.user.userId))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => () => clearTimeout(savedTimer.current), []);
 
@@ -74,6 +100,35 @@ export default function JobApplicantsPage() {
     }
   };
 
+  const saveNote = async (app) => {
+    const text = (noteDrafts[app._id] ?? app.recruiterNotes ?? '').trim();
+    if (text === (app.recruiterNotes ?? '')) {
+      setNoteEditingId(null);
+      return;
+    }
+    setNoteSavingId(app._id);
+    setUpdateError(null);
+    try {
+      const res = await fetch(`/api/applications/${app._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recruiterNotes: text }),
+      });
+      if (!res.ok) {
+        const { error } = await res.json().catch(() => ({}));
+        setUpdateError(error || 'Could not save note');
+        return;
+      }
+      setApplications((prev) => prev.map((a) => (a._id === app._id ? { ...a, recruiterNotes: text } : a)));
+      setNoteEditingId(null);
+    } catch (err) {
+      console.error('Failed to save note', err);
+      setUpdateError('Could not save note');
+    } finally {
+      setNoteSavingId(null);
+    }
+  };
+
   const submitInterview = async (app) => {
     setScheduleLoading(true);
     try {
@@ -89,7 +144,7 @@ export default function JobApplicantsPage() {
       });
       if (res.ok) {
         setShowScheduler(null);
-        setScheduleForm({ interviewType: 'Video', scheduledDate: '', locationOrLink: '', notes: '' });
+        setScheduleForm({ interviewType: 'Video', scheduledDate: '', locationOrLink: '', notes: '', interviewerName: '' });
         await updateStage(app._id, 'Interview');
       }
     } catch (err) {
@@ -121,6 +176,12 @@ export default function JobApplicantsPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <Link
+              href={`/dashboard/recruiter/jobs/${params.id}/pipeline`}
+              className="hf-btn hf-btn-secondary h-10"
+            >
+              <Columns3 size={16} /> Board view
+            </Link>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
               <input type="text" placeholder="Search applicants..." className="hf-input pl-9 h-10 w-64 text-sm" />
@@ -209,7 +270,7 @@ export default function JobApplicantsPage() {
                       <div className="flex flex-wrap items-center gap-4 mt-3 text-body-sm" style={{ color: 'var(--color-text-muted)' }}>
                         <span>Applied {timeAgo(app.createdAt)}</span>
                         {app.cvUrl && (
-                          <a href={app.cvUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-blue-600 hover:text-blue-700 font-medium transition-colors">
+                          <a href={getCvDownloadUrl(app.cvUrl)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-blue-600 hover:text-blue-700 font-medium transition-colors">
                             <FileText size={14} /> View Resume
                           </a>
                         )}
@@ -220,21 +281,27 @@ export default function JobApplicantsPage() {
                   {/* Actions */}
                   <div className="flex flex-col items-end gap-3 sm:ml-auto">
                     <div className="flex items-center gap-3 w-full sm:w-auto">
-                      <select
-                        className="hf-select h-9 text-sm w-full sm:w-auto min-w-[140px] bg-gray-50"
+                      <Select
+                        className="w-full sm:w-auto min-w-[140px]"
+                        triggerClassName="bg-gray-50"
                         value={app.status}
                         disabled={updatingId === app._id}
-                        onChange={(e) => updateStage(app._id, e.target.value)}
-                      >
-                        {APPLICATION_STATUSES.map(stage => (
-                          <option key={stage} value={stage}>{stage}</option>
-                        ))}
-                      </select>
+                        onChange={(value) => updateStage(app._id, value)}
+                        options={APPLICATION_STATUSES.map((stage) => ({ value: stage, label: stage }))}
+                        ariaLabel={`Change stage for ${app.candidateId?.name || 'candidate'}`}
+                        menuMinWidth={170}
+                      />
                       <button
                         onClick={() => setShowScheduler(showScheduler === app._id ? null : app._id)}
                         className="hf-btn hf-btn-secondary h-9 whitespace-nowrap"
                       >
                         <Calendar size={14} /> Schedule
+                      </button>
+                      <button
+                        onClick={() => setShowReview(showReview === app._id ? null : app._id)}
+                        className="hf-btn hf-btn-ghost h-9 whitespace-nowrap"
+                      >
+                        <FileText size={14} /> {showReview === app._id ? 'Hide review' : 'Review'}
                       </button>
                     </div>
                     {updatingId === app._id && <span className="text-caption text-blue-600 animate-pulse">Saving...</span>}
@@ -251,16 +318,12 @@ export default function JobApplicantsPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="hf-field mb-0">
                         <label className="hf-label">Interview Type</label>
-                        <select
+                        <Select
                           value={scheduleForm.interviewType}
-                          onChange={(e) => setScheduleForm(prev => ({ ...prev, interviewType: e.target.value }))}
-                          className="hf-select"
-                        >
-                          <option value="Video">Video Call</option>
-                          <option value="Phone">Phone Screen</option>
-                          <option value="In-Person">In-Person</option>
-                          <option value="Technical">Technical Assessment</option>
-                        </select>
+                          onChange={(value) => setScheduleForm((prev) => ({ ...prev, interviewType: value }))}
+                          options={INTERVIEW_TYPE_OPTIONS}
+                          ariaLabel="Interview type"
+                        />
                       </div>
                       <div className="hf-field mb-0">
                         <label className="hf-label">Date & Time</label>
@@ -268,6 +331,16 @@ export default function JobApplicantsPage() {
                           type="datetime-local"
                           value={scheduleForm.scheduledDate}
                           onChange={(e) => setScheduleForm(prev => ({ ...prev, scheduledDate: e.target.value }))}
+                          className="hf-input"
+                        />
+                      </div>
+                      <div className="sm:col-span-2 hf-field mb-0">
+                        <label className="hf-label">Interviewer</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Jane Doe"
+                          value={scheduleForm.interviewerName}
+                          onChange={(e) => setScheduleForm(prev => ({ ...prev, interviewerName: e.target.value }))}
                           className="hf-input"
                         />
                       </div>
@@ -305,6 +378,166 @@ export default function JobApplicantsPage() {
                           <><Check size={16} /> Confirm Schedule</>
                         )}
                       </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Inline application review */}
+                {showReview === app._id && (
+                  <div className="mt-5 p-5 bg-gray-50 rounded-xl border border-gray-200 space-y-5">
+                    {(app.candidateInfo?.headline || app.candidateInfo?.phone || app.candidateInfo?.location || app.candidateInfo?.skills?.length) && (
+                      <div>
+                        <h4 className="text-body font-semibold mb-3 flex items-center gap-1.5" style={{ color: 'var(--gray-900)' }}>
+                          <User size={14} /> Candidate Profile
+                        </h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-body-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                          {app.candidateInfo.name && <span>Name: <strong style={{ color: 'var(--gray-800)' }}>{app.candidateInfo.name}</strong></span>}
+                          {app.candidateInfo.email && <span>Email: <strong style={{ color: 'var(--gray-800)' }}>{app.candidateInfo.email}</strong></span>}
+                          {app.candidateInfo.phone && <span>Phone: <strong style={{ color: 'var(--gray-800)' }}>{app.candidateInfo.phone}</strong></span>}
+                          {app.candidateInfo.location && <span>Location: <strong style={{ color: 'var(--gray-800)' }}>{app.candidateInfo.location}</strong></span>}
+                        </div>
+                        {app.candidateInfo.headline && (
+                          <p className="text-body-sm mt-2 font-medium" style={{ color: 'var(--gray-700)' }}>{app.candidateInfo.headline}</p>
+                        )}
+                        {app.candidateInfo.skills?.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mt-3">
+                            {app.candidateInfo.skills.map((skill, i) => (
+                              <span key={i} className="px-2.5 py-1 bg-white text-gray-700 text-xs font-medium rounded border border-gray-200">{skill}</span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {app.coverLetter && (
+                      <div>
+                        <h4 className="text-body font-semibold mb-2" style={{ color: 'var(--gray-900)' }}>Cover Letter</h4>
+                        <p className="text-body whitespace-pre-wrap" style={{ color: 'var(--gray-700)' }}>{app.coverLetter}</p>
+                      </div>
+                    )}
+
+                    {app.portfolioUrl && (
+                      <div>
+                        <h4 className="text-body font-semibold mb-2" style={{ color: 'var(--gray-900)' }}>Portfolio</h4>
+                        <a href={app.portfolioUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-blue-600 hover:text-blue-700 font-medium transition-colors">
+                          <Link2 size={14} /> {app.portfolioUrl}
+                        </a>
+                      </div>
+                    )}
+
+                    {app.answers?.length > 0 && (
+                      <div>
+                        <h4 className="text-body font-semibold mb-3" style={{ color: 'var(--gray-900)' }}>Application Answers</h4>
+                        <div className="space-y-4">
+                          {app.answers.map((a, i) => (
+                            <div key={i}>
+                              <p className="text-body-sm font-medium mb-1" style={{ color: 'var(--gray-800)' }}>{a.question}</p>
+                              <p className="text-body whitespace-pre-wrap" style={{ color: 'var(--gray-700)' }}>{a.answer}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {!app.coverLetter && !app.portfolioUrl && !(app.answers?.length > 0) && (
+                      <p className="text-body-sm" style={{ color: 'var(--color-text-muted)' }}>
+                        The candidate submitted this application without extra materials.
+                      </p>
+                    )}
+
+                    {typeof app.matchScore === 'number' && (
+                      <MatchBreakdown application={app} />
+                    )}
+
+                    <div className="bg-white rounded-xl border border-gray-200 p-4">
+                      <MessageThread applicationId={app._id} currentUserId={sessionUserId} />
+                    </div>
+
+                    {/* Tags (recruiter-only view) */}
+                    <div className="bg-white rounded-xl border border-gray-200 p-4">
+                      <h4 className="text-body-sm font-semibold mb-2 flex items-center gap-1.5" style={{ color: 'var(--gray-900)' }}>
+                        <TagIcon size={14} /> Tags
+                        <span className="text-caption font-normal" style={{ color: 'var(--color-text-muted)' }}>team only — candidates never see these</span>
+                      </h4>
+                      <TagEditor
+                        value={tagDrafts[app._id] ?? app.tags ?? []}
+                        onChange={(tags) => setTagDrafts((d) => ({ ...d, [app._id]: tags }))}
+                      />
+                      <div className="flex items-center gap-2 mt-2">
+                        <button
+                          onClick={async () => {
+                            const tags = tagDrafts[app._id] ?? app.tags ?? [];
+                            setUpdateError(null);
+                            try {
+                              const res = await fetch(`/api/applications/${app._id}`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ tags }),
+                              });
+                              if (!res.ok) {
+                                const { error } = await res.json().catch(() => ({}));
+                                setUpdateError(error || 'Could not save tags');
+                                return;
+                              }
+                              setApplications((prev) => prev.map((a) => (a._id === app._id ? { ...a, tags } : a)));
+                              setTagDrafts((d) => ({ ...d, [app._id]: tags }));
+                            } catch (err) {
+                              console.error('Failed to save tags', err);
+                              setUpdateError('Could not save tags');
+                            }
+                          }}
+                          className="hf-btn hf-btn-primary hf-btn-sm"
+                        >
+                          <Check size={14} /> Save tags
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Recruiter note (private to the recruitment team) */}
+                    <div className="bg-white rounded-xl border border-gray-200 p-4">
+                      <h4 className="text-body-sm font-semibold mb-2 flex items-center gap-1.5" style={{ color: 'var(--gray-900)' }}>
+                        <StickyNote size={14} /> Private Recruiter Note
+                        <span className="text-caption font-normal" style={{ color: 'var(--color-text-muted)' }}>team only — candidates never see this</span>
+                      </h4>
+                      {noteEditingId === app._id ? (
+                        <div>
+                          <textarea
+                            rows={3}
+                            value={noteDrafts[app._id] ?? app.recruiterNotes ?? ''}
+                            onChange={(e) => setNoteDrafts((d) => ({ ...d, [app._id]: e.target.value }))}
+                            placeholder="e.g. Strong technical background. Good communication during interview."
+                            className="hf-textarea"
+                          />
+                          <div className="flex items-center gap-2 mt-2">
+                            <button onClick={() => saveNote(app)} disabled={noteSavingId === app._id} className="hf-btn hf-btn-primary hf-btn-sm">
+                              {noteSavingId === app._id && <Loader2 size={14} className="animate-spin" />}
+                              <Check size={14} /> Save note
+                            </button>
+                            <button
+                              onClick={() => {
+                                setNoteEditingId(null);
+                                setNoteDrafts((d) => ({ ...d, [app._id]: app.recruiterNotes ?? '' }));
+                              }}
+                              className="hf-btn hf-btn-ghost hf-btn-sm"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        app.recruiterNotes ? (
+                          <div className="flex items-start justify-between gap-3">
+                            <p className="text-body-sm italic whitespace-pre-wrap" style={{ color: 'var(--gray-600)' }}>"{app.recruiterNotes}"</p>
+                            <button onClick={() => { setNoteEditingId(app._id); setNoteDrafts((d) => ({ ...d, [app._id]: app.recruiterNotes })); }} className="hf-btn hf-btn-ghost hf-btn-sm flex-shrink-0">
+                              Edit
+                            </button>
+                          </div>
+                        ) : (
+                          <button onClick={() => { setNoteEditingId(app._id); setNoteDrafts((d) => ({ ...d, [app._id]: '' })); }} className="hf-btn hf-btn-secondary hf-btn-sm">
+                            <StickyNote size={14} /> Add note
+                          </button>
+                        )
+                      )}
                     </div>
                   </div>
                 )}

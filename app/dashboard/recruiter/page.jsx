@@ -6,7 +6,7 @@ import Job from '@/models/Job';
 import Application from '@/models/Application';
 import Interview from '@/models/Interview';
 import Link from 'next/link';
-import { Plus, Briefcase, Users, Calendar, TrendingUp, ArrowRight, ChevronRight } from 'lucide-react';
+import { Plus, Briefcase, Users, Calendar, TrendingUp, ArrowRight, ChevronRight, Hand, FileText, Handshake, BadgeCheck, Activity } from 'lucide-react';
 import { getStatusBadgeClass, getMatchScoreClass, getGreeting, timeAgo } from '@/lib/utils';
 import {
   APPLICATION_STATUSES,
@@ -27,10 +27,10 @@ export default async function RecruiterDashboard() {
 
   await connectToDatabase();
 
-  const recruiterJobs = await Job.find({ recruiterId: session.userId }).select('_id').lean();
+const recruiterJobs = await Job.find({ recruiterId: session.userId }).select('_id').lean();
   const jobIds = recruiterJobs.map(j => j._id);
 
-  const [totalJobs, activeJobs, totalApplications, scheduledInterviews, recentApplications, upcomingInterviews] = await Promise.all([
+  const [totalJobs, activeJobs, totalApplications, scheduledInterviews, recentApplications, upcomingInterviews, activityCounts] = await Promise.all([
     Job.countDocuments({ recruiterId: session.userId }),
     Job.countDocuments({ recruiterId: session.userId, status: 'active' }),
     Application.countDocuments({ jobId: { $in: jobIds } }),
@@ -47,6 +47,15 @@ export default async function RecruiterDashboard() {
       .sort({ scheduledDate: 1 })
       .limit(4)
       .lean(),
+    Application.aggregate([
+      {
+        $match: {
+          jobId: { $in: jobIds },
+          createdAt: { $gte: new Date(Date.now() - 13 * 24 * 60 * 60 * 1000) },
+        },
+      },
+      { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }, count: { $sum: 1 } } },
+    ]),
   ]);
 
   // Pipeline counts. Every stage in APPLICATION_STATUSES gets a bucket — including
@@ -61,11 +70,32 @@ export default async function RecruiterDashboard() {
     if (_id in pipelineMap) pipelineMap[_id] = count;
   });
 
+  const inPipeline = Object.entries(pipelineMap)
+    .filter(([status]) => status !== 'Hired' && status !== 'Rejected')
+    .reduce((sum, [, count]) => sum + count, 0);
+
+  const dayCounts = {};
+  activityCounts.forEach(({ _id, count }) => { dayCounts[_id] = count; });
+  const activityDays = [];
+  const dayKeys = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const dayRef = new Date();
+  dayRef.setHours(23, 59, 59, 999);
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(dayRef);
+    d.setDate(d.getDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    activityDays.push({ key, count: dayCounts[key] || 0, label: dayKeys[d.getUTCDay()] });
+  }
+  const maxActivity = Math.max(...activityDays.map(d => d.count), 1);
+
   const stats = [
-    { label: 'Total Jobs',     value: totalJobs,        icon: Briefcase, color: 'text-blue-600',  bg: 'bg-blue-50'  },
-    { label: 'Active Jobs',    value: activeJobs,        icon: TrendingUp, color: 'text-green-600', bg: 'bg-green-50' },
-    { label: 'Total Applicants', value: totalApplications, icon: Users,     color: 'text-purple-600', bg: 'bg-purple-50' },
-    { label: 'Interviews',     value: scheduledInterviews, icon: Calendar, color: 'text-amber-600', bg: 'bg-amber-50'  },
+    { label: 'Total Jobs',     value: totalJobs,          icon: Briefcase,  color: 'text-blue-600',     bg: 'bg-blue-50'   },
+    { label: 'Active Jobs',    value: activeJobs,         icon: TrendingUp, color: 'text-green-600',    bg: 'bg-green-50'  },
+    { label: 'Total Applicants', value: totalApplications, icon: Users,     color: 'text-purple-600',   bg: 'bg-purple-50' },
+    { label: 'In Pipeline',    value: inPipeline,         icon: FileText,   color: 'text-cyan-600',     bg: 'bg-cyan-50'   },
+    { label: 'Interviews',     value: scheduledInterviews, icon: Calendar, color: 'text-amber-600',    bg: 'bg-amber-50'  },
+    { label: 'Offers',         value: pipelineMap['Offer'] || 0, icon: Handshake, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+    { label: 'Hires',          value: pipelineMap['Hired'] || 0, icon: BadgeCheck, color: 'text-rose-600',  bg: 'bg-rose-50'  },
   ];
 
   return (
@@ -75,8 +105,9 @@ export default async function RecruiterDashboard() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-h2" style={{ color: 'var(--gray-900)' }}>
-            {getGreeting(session.name)} 👋
-          </h1>
+              {getGreeting(session.name)}{' '}
+              <Hand className="inline h-6 w-6 -mt-1" style={{ color: 'var(--brand-600)' }} />
+            </h1>
           <p className="text-body mt-1" style={{ color: 'var(--color-text-secondary)' }}>
             Here&apos;s what&apos;s happening with your recruitment today.
           </p>
@@ -100,6 +131,30 @@ export default async function RecruiterDashboard() {
             <p className="text-h2 mt-1" style={{ color: 'var(--gray-900)', lineHeight: 1 }}>{value}</p>
           </div>
         ))}
+      </div>
+
+      {/* Hiring Activity */}
+      <div className="hf-card p-6 hf-stagger">
+        <div className="flex items-center gap-2 mb-6">
+          <Activity className="h-5 w-5" style={{ color: 'var(--brand-600)' }} />
+          <h2 className="text-h4" style={{ color: 'var(--gray-900)' }}>Hiring Activity</h2>
+          <span className="text-caption ml-auto" style={{ color: 'var(--color-text-muted)' }}>Last 14 days</span>
+        </div>
+        <div className="flex items-end gap-2 h-40">
+          {activityDays.map(day => (
+            <div key={day.key} className="flex-1 flex flex-col items-center gap-2 group" title={`${day.key} — ${day.count} application${day.count === 1 ? '' : 's'}`}>
+              <div
+                className="w-full rounded-md transition-all duration-500 group-hover:opacity-80"
+                style={{
+                  height: `${Math.max((day.count / maxActivity) * 100, day.count > 0 ? 10 : 3)}%`,
+                  minHeight: '3px',
+                  backgroundColor: day.count > 0 ? 'var(--brand-500)' : 'var(--color-border)',
+                }}
+              ></div>
+              <span className="text-caption" style={{ color: 'var(--color-text-muted)' }}>{day.label}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Main grid: Pipeline + Interviews */}

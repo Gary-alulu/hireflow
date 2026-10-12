@@ -63,7 +63,7 @@ const InterviewSchema = new mongoose.Schema({
 async function seed() {
   try {
     await mongoose.connect(MONGODB_URI);
-    console.log('✓ Connected to MongoDB');
+    console.log('[OK] Connected to MongoDB');
 
     // Register models
     const Company = mongoose.model('Company', CompanySchema);
@@ -82,12 +82,12 @@ async function seed() {
       Application.deleteMany({}),
       Interview.deleteMany({}),
     ]);
-    console.log('✓ Cleared existing data');
+    console.log('[OK] Cleared existing data');
 
     // Seed Companies
     const company1 = await Company.create({ name: 'Acme Corp', industry: 'Technology', location: 'San Francisco, CA' });
     const company2 = await Company.create({ name: 'Stark Industries', industry: 'Engineering', location: 'New York, NY' });
-    console.log('✓ Companies created');
+    console.log('[OK] Companies created');
 
     // Seed Users
     const salt = await bcrypt.genSalt(10);
@@ -99,7 +99,7 @@ async function seed() {
     const candidate1 = await User.create({ name: 'Alice Johnson', email: 'alice@example.com', password, role: 'candidate' });
     const candidate2 = await User.create({ name: 'Bob Williams', email: 'bob@example.com', password, role: 'candidate' });
     const candidate3 = await User.create({ name: 'Carlos Rivera', email: 'carlos@example.com', password, role: 'candidate' });
-    console.log('✓ Users created (password: password123)');
+    console.log('[OK] Users created (password: password123)');
 
     // Seed Candidate Profiles
     await CandidateProfile.create({
@@ -124,7 +124,7 @@ async function seed() {
       skills: ['Python', 'SQL', 'Tableau', 'Excel'],
       cvUrl: 'https://example.com/carlos-cv.pdf',
     });
-    console.log('✓ Candidate profiles created');
+    console.log('[OK] Candidate profiles created');
 
     // Seed Jobs
     const job1 = await Job.create({
@@ -195,7 +195,7 @@ async function seed() {
       recruiterId: recruiter2._id,
     });
 
-    console.log('✓ Jobs created (3 active, 1 draft)');
+    console.log('[OK] Jobs created (3 active, 1 draft)');
 
     // Seed Applications
     const app1 = await Application.create({
@@ -221,7 +221,7 @@ async function seed() {
       status: 'Screening', matchScore: 45,
       matchReasoning: 'Match: 45%.\n\nReasons:\n- Missing key required skills: React, Next.js, TypeScript, Tailwind CSS.',
     });
-    console.log('✓ Applications created');
+    console.log('[OK] Applications created');
 
     // Seed Interviews
     await Interview.create({
@@ -246,10 +246,10 @@ async function seed() {
       notes: 'Portfolio review and whiteboard design challenge.',
       status: 'Scheduled',
     });
-    console.log('✓ Interviews created');
+    console.log('[OK] Interviews created');
 
-    console.log('\n🎉 Seed completed successfully!');
-    console.log('\n📧 Test Accounts (all passwords: password123):');
+    console.log('\nSeed completed successfully!');
+    console.log('\nTest Accounts (all passwords: password123):');
     console.log('  Recruiter: jane@acme.com');
     console.log('  Recruiter: tom@stark.com');
     console.log('  Candidate: alice@example.com');
@@ -259,7 +259,7 @@ async function seed() {
     await mongoose.disconnect();
     process.exit(0);
   } catch (error) {
-    console.error('❌ Seed error:', error.message);
+    console.error('Seed error:', error.message);
     await mongoose.disconnect();
     process.exit(1);
   }

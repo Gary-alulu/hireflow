@@ -5,6 +5,12 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
 import PageTransition from '@/components/PageTransition';
+import Select from '@/components/ui/Select';
+
+const ROLE_OPTIONS = [
+  { value: 'candidate', label: 'Candidate (Looking for jobs)' },
+  { value: 'recruiter', label: 'Recruiter (Hiring)' },
+];
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -122,17 +128,14 @@ export default function RegisterPage() {
 
           <div className="hf-field">
             <label htmlFor="role" className="hf-label">I am a...</label>
-            <select
+            <Select
               id="role"
-              name="role"
               value={formData.role}
-              onChange={handleChange}
-              className="hf-select"
+              onChange={(value) => setFormData((prev) => ({ ...prev, role: value }))}
+              options={ROLE_OPTIONS}
               disabled={loading}
-            >
-              <option value="candidate">Candidate (Looking for jobs)</option>
-              <option value="recruiter">Recruiter (Hiring)</option>
-            </select>
+              ariaLabel="I am a"
+            />
           </div>
 
           {formData.role === 'recruiter' && (

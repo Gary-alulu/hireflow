@@ -18,7 +18,7 @@ export async function GET() {
       profile = await CandidateProfile.create({ userId: session.userId });
     }
 
-    return NextResponse.json({ profile }, { status: 200 });
+    return NextResponse.json({ profile, email: session.email, name: session.name }, { status: 200 });
   } catch (error) {
     console.error('Fetch profile error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

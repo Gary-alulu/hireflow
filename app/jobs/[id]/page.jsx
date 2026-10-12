@@ -2,18 +2,21 @@ export const dynamic = 'force-dynamic';
 
 import connectToDatabase from '@/lib/db';
 import Job from '@/models/Job';
+import Company from '@/models/Company';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Briefcase, MapPin, Clock, DollarSign, ChevronLeft, Building, Share2 } from 'lucide-react';
 import { getSession } from '@/lib/auth';
 import ApplyButton from '@/components/ApplyButton';
+import SaveJobButton from '@/components/SaveJobButton';
 import Application from '@/models/Application';
 import { timeAgo } from '@/lib/utils';
 import PageTransition from '@/components/PageTransition';
+import Footer from '@/components/Footer';
 
 export default async function PublicJobDetailsPage({ params }) {
   await connectToDatabase();
-  const { id } = params;
+  const { id } = await params;
   const job = await Job.findOne({ _id: id, status: 'active' }).populate('companyId', 'name logo');
   
   if (!job) notFound();
@@ -31,7 +34,7 @@ export default async function PublicJobDetailsPage({ params }) {
 
   return (
     <PageTransition>
-      <div className="min-h-screen bg-gray-50 flex flex-col pb-12 hf-in">
+      <div className="min-h-screen bg-gray-50 flex flex-col hf-in">
       {/* Header */}
       <header className="bg-white border-b" style={{ borderColor: 'var(--color-border)' }}>
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex justify-between items-center">
@@ -126,15 +129,33 @@ export default async function PublicJobDetailsPage({ params }) {
                   </section>
                 </>
               )}
+
+              {job.benefits?.length > 0 && (
+                <>
+                  <hr className="hf-divider" />
+                  <section>
+                    <h2 className="text-h3 mb-4" style={{ color: 'var(--gray-900)' }}>Benefits</h2>
+                    <ul className="space-y-3">
+                      {job.benefits.map((benefit, i) => (
+                        <li key={i} className="flex items-start gap-3 text-body" style={{ color: 'var(--gray-700)' }}>
+                          <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 flex-shrink-0"></div>
+                          <span>{benefit}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                </>
+              )}
             </div>
           </div>
 
           {/* Sidebar */}
           <div className="space-y-6">
             <div className="hf-card p-6 sticky top-6">
-              <div className="mb-6">
+              <div className="mb-3">
                 <ApplyButton jobId={job._id.toString()} hasApplied={hasApplied} />
               </div>
+              <SaveJobButton jobId={job._id.toString()} />
               
               <div className="space-y-4 pt-6 border-t border-gray-100">
                 <h3 className="text-h4" style={{ color: 'var(--gray-900)' }}>Job Overview</h3>
@@ -153,6 +174,15 @@ export default async function PublicJobDetailsPage({ params }) {
                   <div>
                     <p className="text-caption" style={{ color: 'var(--color-text-muted)' }}>Salary Range</p>
                     <p className="text-body font-medium mt-0.5" style={{ color: 'var(--gray-900)' }}>{job.salaryRange}</p>
+                  </div>
+                )}
+
+                {job.applicationDeadline && (
+                  <div>
+                    <p className="text-caption" style={{ color: 'var(--color-text-muted)' }}>Apply By</p>
+                    <p className="text-body font-medium mt-0.5" style={{ color: 'var(--gray-900)' }}>
+                      {new Date(job.applicationDeadline).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                    </p>
                   </div>
                 )}
               </div>
@@ -180,6 +210,7 @@ export default async function PublicJobDetailsPage({ params }) {
 
         </div>
       </main>
+      <Footer />
       </div>
     </PageTransition>
   );

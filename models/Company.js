@@ -9,6 +9,13 @@ const CompanySchema = new mongoose.Schema(
     industry: { type: String },
     size: { type: String },
     location: { type: String },
+    socialLinks: {
+      linkedIn: { type: String },
+      twitter: { type: String },
+      facebook: { type: String },
+      instagram: { type: String },
+      github: { type: String },
+    },
   },
   { timestamps: true }
 );

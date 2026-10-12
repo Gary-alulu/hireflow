@@ -11,6 +11,14 @@ const JobSchema = new mongoose.Schema(
     description: { type: String, required: true },
     responsibilities: [{ type: String }],
     requirements: [{ type: String }],
+    benefits: [{ type: String }],
+    questions: [{ type: String }],
+    customQuestions: [
+      {
+        question: { type: String, trim: true, maxlength: 500 },
+        required: { type: Boolean, default: false },
+      },
+    ],
     skills: [{ type: String }],
     experienceLevel: { type: String, required: true },
     applicationDeadline: { type: Date },
@@ -32,5 +40,8 @@ const JobSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+JobSchema.index({ recruiterId: 1, createdAt: -1 });
+JobSchema.index({ status: 1, createdAt: -1 });
 
 export default mongoose.models.Job || mongoose.model('Job', JobSchema);

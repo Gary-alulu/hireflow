@@ -11,6 +11,7 @@ const CandidateProfileSchema = new mongoose.Schema(
     phone: { type: String },
     location: { type: String },
     profilePhoto: { type: String },
+    headline: { type: String },
     professionalSummary: { type: String },
     skills: [{ type: String }],
     experience: [
@@ -35,7 +36,9 @@ const CandidateProfileSchema = new mongoose.Schema(
     certifications: [{ name: String, issuer: String, date: Date }],
     portfolioUrl: { type: String },
     linkedInUrl: { type: String },
+    githubUrl: { type: String },
     cvUrl: { type: String }, // Link to uploaded CV file
+    cvText: { type: String }, // Extracted plain text of the uploaded CV (txt uploads only)
   },
   { timestamps: true }
 );

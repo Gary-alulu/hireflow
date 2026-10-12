@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Calendar, Video, MapPin, Phone, Clock } from 'lucide-react';
+import { Calendar, Video, MapPin, Phone, Clock, ExternalLink } from 'lucide-react';
 import PageTransition from '@/components/PageTransition';
 
 export default function CandidateInterviewsPage() {
@@ -33,6 +33,16 @@ export default function CandidateInterviewsPage() {
     }
   };
 
+  const statusBadgeClass = (status) => {
+    const map = {
+      Scheduled: 'hf-badge hf-badge-scheduled',
+      Rescheduled: 'hf-badge hf-badge-rescheduled',
+      Completed: 'hf-badge hf-badge-completed',
+      Cancelled: 'hf-badge hf-badge-cancelled',
+    };
+    return map[status] || 'hf-badge hf-badge-unknown';
+  };
+
   return (
     <PageTransition key={loading ? 'loading' : 'ready'}>
       <div className="space-y-6 max-w-5xl mx-auto">
@@ -48,14 +58,18 @@ export default function CandidateInterviewsPage() {
           </div>
         ) : (
           <div className="grid gap-6 sm:grid-cols-2">
-            {interviews.map((interview) => (
+            {interviews.map((interview) => {
+              const isJoinable = interview.status === 'Scheduled' || interview.status === 'Rescheduled';
+              return (
               <div key={interview._id} className="hf-card p-6 border-t-4" style={{ borderTopColor: 'var(--brand-500)' }}>
-                <div className="flex justify-between items-start">
+                <div className="flex justify-between items-start gap-3">
                   <div>
                     <h3 className="text-h4" style={{ color: 'var(--gray-900)' }}>{interview.jobId?.title}</h3>
-                    <p className="text-body-sm mt-1" style={{ color: 'var(--color-text-secondary)' }}>Interviewer: {interview.recruiterId?.name}</p>
+                    <p className="text-body-sm mt-1" style={{ color: 'var(--color-text-secondary)' }}>
+                      Interviewer: {interview.interviewerName || interview.recruiterId?.name || 'TBD'}
+                    </p>
                   </div>
-                  <span className="hf-badge" style={{ backgroundColor: 'var(--brand-50)', color: 'var(--brand-700)' }}>
+                  <span className={statusBadgeClass(interview.status)}>
                     {interview.status}
                   </span>
                 </div>
@@ -69,12 +83,31 @@ export default function CandidateInterviewsPage() {
                     {getIcon(interview.interviewType)}
                     <span className="ml-3">{interview.interviewType} Interview</span>
                   </div>
-                  <div className="flex items-center text-body-sm p-3 rounded-md mt-2" style={{ backgroundColor: 'var(--brand-50)', color: 'var(--brand-700)' }}>
-                    <span className="break-all font-medium">{interview.locationOrLink}</span>
-                  </div>
+                  {interview.notes && (
+                    <div className="text-body-sm text-gray-600" style={{ color: 'var(--gray-600)' }}>
+                      <span className="font-medium">Notes: </span>{interview.notes}
+                    </div>
+                  )}
+                  {isJoinable ? (
+                    <a
+                      href={interview.locationOrLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 mt-1 text-body-sm font-semibold px-4 py-2 rounded-lg"
+                      style={{ backgroundColor: 'var(--brand-50)', color: 'var(--brand-700)' }}
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      {interview.locationOrLink || 'Join Interview'}
+                    </a>
+                  ) : (
+                    <div className="flex items-center text-body-sm p-3 rounded-md mt-2" style={{ backgroundColor: 'var(--gray-50)', color: 'var(--gray-500)' }}>
+                      <span className="break-all">{interview.locationOrLink}</span>
+                    </div>
+                  )}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

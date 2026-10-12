@@ -49,9 +49,16 @@ export async function PUT(request) {
         if (data.companyName) company.name = data.companyName;
         if (data.description) company.description = data.description;
         if (data.website) company.website = data.website;
+        if (data.logo) company.logo = data.logo;
         if (data.industry) company.industry = data.industry;
         if (data.size) company.size = data.size;
         if (data.location) company.location = data.location;
+        if (data.socialLinks) {
+          company.socialLinks = {
+            ...(company.socialLinks || {}),
+            ...data.socialLinks,
+          };
+        }
         await company.save();
       }
     }

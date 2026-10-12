@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { CheckCircle, ArrowRight, BrainCircuit, FileSearch, Calendar, BarChart3, Users, Shield, Zap, MessageSquare } from 'lucide-react';
+import Footer from '@/components/Footer';
 
 export const metadata = {
   title: 'Services — HireFlow',
@@ -105,10 +106,7 @@ export default function ServicesPage() {
       {/* Navigation */}
       <nav className="max-w-[1400px] mx-auto px-6 py-6 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--brand-600)' }}>
-            <div className="w-3.5 h-3.5 rounded-full bg-white/30 border-2 border-white"></div>
-          </div>
-          <span className="text-xl font-bold tracking-tight" style={{ color: 'var(--brand-900)' }}>HireFlow</span>
+          <img src="/images/hireflow-logo.png" alt="HireFlow" className="h-8 w-8 rounded-full bg-white object-contain flex-shrink-0" />
         </Link>
 
         <div className="hidden md:flex items-center gap-8 text-sm font-medium" style={{ color: 'var(--brand-900)' }}>
@@ -290,6 +288,8 @@ export default function ServicesPage() {
           </div>
         </div>
       </section>
+
+      <Footer />
 
     </div>
   );

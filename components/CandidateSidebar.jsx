@@ -3,20 +3,22 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  LayoutDashboard, Briefcase, FileText, Calendar, User
+  LayoutDashboard, Briefcase, FileText, Calendar, User, Bookmark, Settings
 } from 'lucide-react';
 import LogoutButton from '@/components/LogoutButton';
 import { cn } from '@/lib/utils';
 
-const navItems = [
+export const candidateNavItems = [
   { href: '/dashboard/candidate',               label: 'Overview',     icon: LayoutDashboard },
   { href: '/jobs',                               label: 'Browse Jobs',  icon: Briefcase },
   { href: '/dashboard/candidate/applications',  label: 'Applications', icon: FileText },
+  { href: '/dashboard/candidate/saved',         label: 'Saved Jobs',   icon: Bookmark },
   { href: '/dashboard/candidate/interviews',    label: 'Interviews',   icon: Calendar },
   { href: '/dashboard/candidate/profile',       label: 'My Profile',   icon: User },
+  { href: '/dashboard/candidate/settings',      label: 'Settings',     icon: Settings },
 ];
 
-export default function CandidateSidebar() {
+export default function CandidateSidebar({ onNavigate = null }) {
   const pathname = usePathname();
 
   return (
@@ -35,7 +37,7 @@ export default function CandidateSidebar() {
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-        {navItems.map(({ href, label, icon: Icon }) => {
+        {candidateNavItems.map(({ href, label, icon: Icon }) => {
           const isActive = href === '/dashboard/candidate'
             ? pathname === href
             : pathname.startsWith(href);
@@ -43,6 +45,7 @@ export default function CandidateSidebar() {
             <Link
               key={href}
               href={href}
+              onClick={onNavigate}
               transitionTypes={['nav-forward']}
               className={cn('hf-nav-link', isActive && 'active')}
             >

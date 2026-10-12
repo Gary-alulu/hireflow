@@ -3,21 +3,22 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  LayoutDashboard, Briefcase, Users, Calendar, Settings, BarChart3
+  LayoutDashboard, Briefcase, Users, Calendar, Settings, BarChart3, Bookmark
 } from 'lucide-react';
 import LogoutButton from '@/components/LogoutButton';
 import { cn } from '@/lib/utils';
 
-const navItems = [
-  { href: '/dashboard/recruiter',            label: 'Dashboard',  icon: LayoutDashboard },
-  { href: '/dashboard/recruiter/jobs',       label: 'Jobs',       icon: Briefcase },
-  { href: '/dashboard/recruiter/candidates', label: 'Candidates', icon: Users },
-  { href: '/dashboard/recruiter/interviews', label: 'Interviews', icon: Calendar },
-  { href: '/dashboard/recruiter/analytics',  label: 'Analytics',  icon: BarChart3 },
-  { href: '/dashboard/recruiter/settings',   label: 'Settings',   icon: Settings },
+export const recruiterNavItems = [
+  { href: '/dashboard/recruiter',            label: 'Dashboard',    icon: LayoutDashboard },
+  { href: '/dashboard/recruiter/jobs',       label: 'Jobs',         icon: Briefcase },
+  { href: '/dashboard/recruiter/candidates', label: 'Candidates',   icon: Users },
+  { href: '/dashboard/recruiter/talent-pool', label: 'Talent Pool', icon: Bookmark },
+  { href: '/dashboard/recruiter/interviews', label: 'Interviews',   icon: Calendar },
+  { href: '/dashboard/recruiter/analytics',  label: 'Analytics',    icon: BarChart3 },
+  { href: '/dashboard/recruiter/settings',   label: 'Settings',     icon: Settings },
 ];
 
-export default function RecruiterSidebar() {
+export default function RecruiterSidebar({ onNavigate = null }) {
   const pathname = usePathname();
 
   return (
@@ -36,7 +37,7 @@ export default function RecruiterSidebar() {
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-        {navItems.map(({ href, label, icon: Icon }) => {
+        {recruiterNavItems.map(({ href, label, icon: Icon }) => {
           const isActive = href === '/dashboard/recruiter'
             ? pathname === href
             : pathname.startsWith(href);
@@ -44,6 +45,7 @@ export default function RecruiterSidebar() {
             <Link
               key={href}
               href={href}
+              onClick={onNavigate}
               transitionTypes={['nav-forward']}
               className={cn('hf-nav-link', isActive && 'active')}
             >

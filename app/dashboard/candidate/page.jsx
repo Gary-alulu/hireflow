@@ -6,7 +6,7 @@ import Application from '@/models/Application';
 import Interview from '@/models/Interview';
 import CandidateProfile from '@/models/CandidateProfile';
 import Link from 'next/link';
-import { Briefcase, Calendar, User, ArrowRight, ChevronRight, Search, Sparkles } from 'lucide-react';
+import { Briefcase, Calendar, User, ArrowRight, ChevronRight, Search, Sparkles, Hand } from 'lucide-react';
 import { getStatusBadgeClass, getMatchScoreClass, getGreeting, timeAgo } from '@/lib/utils';
 import { hasMatchScore } from '@/lib/pipeline';
 import PageTransition from '@/components/PageTransition';
@@ -58,8 +58,9 @@ export default async function CandidateDashboard() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-h2" style={{ color: 'var(--gray-900)' }}>
-            {getGreeting(session.name)} 👋
-          </h1>
+              {getGreeting(session.name)}{' '}
+              <Hand className="inline h-6 w-6 -mt-1" style={{ color: 'var(--brand-600)' }} />
+            </h1>
           <p className="text-body mt-1" style={{ color: 'var(--color-text-secondary)' }}>
             Track your applications and upcoming interviews.
           </p>

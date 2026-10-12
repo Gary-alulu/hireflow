@@ -7,11 +7,7 @@ export default function AuthLayout({ children }) {
         {/* Logo */}
         <div className="flex justify-center mb-8">
           <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
-              <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
-                <path d="M3 4h10M3 8h7M3 12h5" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-              </svg>
-            </div>
+            <img src="/images/hireflow-logo.png" alt="HireFlow" className="h-8 w-8 rounded-full bg-white object-contain flex-shrink-0" />
             <span className="font-bold text-xl tracking-tight" style={{ color: 'var(--gray-900)' }}>HireFlow</span>
           </Link>
         </div>

@@ -27,6 +27,7 @@ const InterviewSchema = new mongoose.Schema(
       enum: ['Phone', 'Video', 'In-Person', 'Technical'],
       required: true,
     },
+    interviewerName: { type: String },
     scheduledDate: { type: Date, required: true },
     locationOrLink: { type: String, required: true },
     notes: { type: String },
@@ -38,5 +39,8 @@ const InterviewSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+InterviewSchema.index({ recruiterId: 1, scheduledDate: 1 });
+InterviewSchema.index({ candidateId: 1, scheduledDate: 1 });
 
 export default mongoose.models.Interview || mongoose.model('Interview', InterviewSchema);
